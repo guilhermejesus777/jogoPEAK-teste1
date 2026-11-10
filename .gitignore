@@ -1,0 +1,6 @@
+# servidor local de desenvolvimento
+_server.js
+
+# sistema
+.DS_Store
+Thumbs.db
