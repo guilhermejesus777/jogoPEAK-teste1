@@ -8,6 +8,10 @@ controlado a **stamina**, escalando paredes íngremes e descansando nos platôs.
 
 > Projeto de fã, feito do zero. Não é afiliado nem oficialmente ligado a PEAK.
 
+## Jogar online
+
+**https://guilhermejesus777.github.io/jogoPEAK-teste1/**
+
 ## Como jogar
 
 ```bash
