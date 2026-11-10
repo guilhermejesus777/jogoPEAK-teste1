@@ -2,9 +2,9 @@
 
 ![preview](preview.jpg)
 
-Um jogo de escalada em 3D feito em **um único arquivo HTML** com [Three.js](https://threejs.org/).
-Inspirado na mecânica de **PEAK** (Aggro Crab & Landfall): você precisa subir uma montanha
-controlado a **stamina**, escalando paredes íngremes e descansando nos platôs.
+Um jogo de escalada em 3D feito em **um único arquivo HTML** com [Three.js](https://threejs.org/),
+inspirado em **PEAK** (Aggro Crab & Landfall): uma ilha, uma montanha, um cume — e uma
+**stamina** que não deixa você errar.
 
 > Projeto de fã, feito do zero. Não é afiliado nem oficialmente ligado a PEAK.
 
@@ -30,30 +30,44 @@ Também dá para abrir o `index.html` direto — precisa de internet só para ca
 | Tecla | Ação |
 | --- | --- |
 | `WASD` | andar |
-| `SHIFT` | segurar/escalar (perto de uma parede) |
+| `SHIFT` | segurar / escalar (perto de uma parede) |
 | `ESPAÇO` | pular / saltar da parede |
-| `MOUSE` | olhar |
-| `R` | voltar ao início |
+| `MOUSE` | olhar (pointer lock ou arrastando com o botão esquerdo) |
+| `Q` `E` | girar a câmera |
+| `RODA` | zoom |
+| `R` | voltar ao último acampamento |
 | `ESC` | pausar |
 
-## Como funciona
+> Se o mouse não girar a câmera (alguns navegadores/iframes bloqueiam o *pointer lock*),
+> **arraste com o botão esquerdo** que funciona igual.
 
-- **Terreno procedural:** a montanha é um heightmap analítico (cone + ruído + terraços),
-  gerado no carregamento com cores por vértice e visual low-poly.
-- **Física:** colisão por amostragem de altura, com limite de degrau (você não sobe paredão andando)
-  e escorregão em encostas muito íngremes.
-- **Escalada:** segurando `SHIFT` perto de uma superfície inclinada o personagem gruda na parede
-  e se move no plano tangente. A stamina cai mais rápido ao subir.
-- **Stamina:** gasta escalando, regenera em chão plano — planeje as paradas nos platôs.
-- **Objetivo:** chegar na bandeira no cume antes que a stamina (e a paciência) acabem.
+## O que tem no jogo
 
-## Possíveis próximos passos
+- **Uma montanha só**, numa ilha, com biomas por altitude: praia, mata, rocha e neve no cume.
+- **Personagem estilo escoteiro do PEAK**: cabeça redonda, óculos, gorro, jaqueta e mochila com
+  saco de dormir e bandeirinha.
+- **Escalada**: segure `SHIFT` numa parede, suba/desça/lateralize pela superfície.
+  Quanto mais íngreme, mais devagar (e mais stamina).
+- **Stamina**: cai escalando, regenera em platôs — planeje as paradas.
+- **Acampamentos**: 3 fogueiras no caminho viram checkpoint e enchem a stamina.
+- **Queda feia** desconta stamina; **`R`** te devolve ao último acampamento.
+- Água com ondas, ilhas ao fundo, árvores, nuvens e pássaros.
+
+## Como funciona (por baixo)
+
+- **Terreno procedural:** heightmap analítico (cone + ruído + terraços + praia),
+  malha low-poly com cores por vértice.
+- **Física:** colisão por amostragem de altura, limite de degrau (não sobe paredão andando)
+  e escorregão em encostas íngremes.
+- **Escalada:** o jogador gruda na superfície e anda no plano tangente; a âncora é mantida em
+  `(x, z)` e a altura vem do heightmap, então a velocidade é corrigida pela inclinação.
+
+## Próximos passos possíveis
 
 - Multijogador (o coração de PEAK) com WebSocket
-- Sistema de lesões / resgate no meio da montanha
-- Biomas diferentes conforme a altitude
-- Sons de vento, passos e escalada
-- Checkpoints (acampamentos) no caminho
+- Sistema de lesão / resgate
+- Corda, pitons e equipamento
+- Mais biomas e um cume com "endgame"
 
 ## Stack
 
