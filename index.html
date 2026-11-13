@@ -56,6 +56,35 @@
   .small{ margin-top:28px; font-size:11.5px; opacity:.58; line-height:2.1; letter-spacing:.06em; }
   #win h1{ font-size:clamp(38px,7.5vw,76px); }
   #win .stat{ margin-top:12px; font-size:15px; opacity:.9; letter-spacing:.12em; }
+
+  /* ---- zonas, itens e co-op ---- */
+  #zone{ position:absolute; left:50%; top:18px; transform:translateX(-50%); text-align:center;
+    font-size:9.5px; letter-spacing:.5em; text-transform:uppercase; opacity:0; transition:opacity .7s; }
+  #zone b{ display:block; font-size:17px; letter-spacing:.30em; color:var(--gold); margin-top:5px; font-weight:800;
+    text-shadow:0 2px 16px rgba(0,0,0,.6); }
+  #chips{ display:flex; gap:7px; margin-top:10px; }
+  .chip{ font-size:9.5px; letter-spacing:.16em; text-transform:uppercase; padding:4px 9px; border-radius:99px;
+    background:rgba(18,5,38,.55); box-shadow:inset 0 0 0 1px rgba(255,255,255,.14); opacity:0; transition:opacity .3s; }
+  .chip.on{ opacity:1; }
+  .chip.cold{ color:#bfe9ff; box-shadow:inset 0 0 0 1px rgba(150,220,255,.55); }
+  .chip.hurt{ color:#ff9a9a; box-shadow:inset 0 0 0 1px rgba(255,120,120,.55); }
+  #inv{ position:absolute; left:26px; bottom:64px; display:flex; flex-direction:column; gap:6px; }
+  .slot{ display:flex; align-items:center; gap:9px; padding:6px 12px; border-radius:9px; font-size:10px;
+    letter-spacing:.14em; text-transform:uppercase; background:rgba(18,5,38,.55); opacity:.5;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.10); transition:opacity .2s, box-shadow .2s; }
+  .slot b{ font-size:12.5px; letter-spacing:.02em; }
+  .slot .k{ display:inline-flex; align-items:center; justify-content:center; width:17px; height:17px; border-radius:4px;
+    background:rgba(255,255,255,.16); font-size:10px; }
+  .slot.have{ opacity:1; box-shadow:inset 0 0 0 1px rgba(255,212,71,.45); }
+  #chat{ position:absolute; left:26px; bottom:142px; display:flex; flex-direction:column; gap:5px; max-width:330px; }
+  .msg{ font-size:11.5px; letter-spacing:.03em; background:rgba(18,5,38,.55); padding:6px 11px; border-radius:8px;
+    opacity:0; transform:translateY(6px); transition:opacity .35s, transform .35s; }
+  .msg.on{ opacity:1; transform:translateY(0); }
+  .msg b{ font-weight:800; }
+  #winStats{ margin-top:16px; display:flex; gap:26px; }
+  #winStats div{ text-align:center; }
+  #winStats b{ display:block; font-size:22px; font-weight:800; color:var(--gold); }
+  #winStats span{ font-size:9.5px; letter-spacing:.2em; text-transform:uppercase; opacity:.6; }
 </style>
 </head>
 <body>
@@ -67,15 +96,25 @@
     <div id="alt"><b id="altv">0</b> m &nbsp;/&nbsp; <span id="altmax">118</span> m</div>
     <div id="bar"><div id="stam"></div></div>
     <div id="stamLabel">stamina</div>
+    <div id="chips">
+      <span class="chip cold" id="chipCold">frio</span>
+      <span class="chip hurt" id="chipHurt">lesionado</span>
+    </div>
   </div>
   <div id="tr">
     <div id="time">0:00</div>
     <div id="prog"><div id="progf"></div></div>
   </div>
+  <div id="zone"><span>zona</span><b id="zoneName">praia</b></div>
+  <div id="chat"></div>
+  <div id="inv">
+    <div class="slot" id="slotE"><span class="k">1</span> energético <b id="nEnergy">×0</b></div>
+    <div class="slot" id="slotB"><span class="k">2</span> bandagem <b id="nBandage">×0</b></div>
+  </div>
   <div id="fireTip">acampamento</div>
   <div id="hint">
     <kbd>WASD</kbd> mover &nbsp;·&nbsp; <kbd>SHIFT</kbd> escalar &nbsp;·&nbsp; <kbd>ESPAÇO</kbd> pular &nbsp;·&nbsp;
-    <kbd>MOUSE</kbd> arrastar/olhar &nbsp;·&nbsp; <kbd>Q</kbd><kbd>E</kbd> girar &nbsp;·&nbsp; <kbd>R</kbd> acampamento
+    <kbd>1</kbd><kbd>2</kbd> itens &nbsp;·&nbsp; <kbd>MOUSE</kbd> olhar &nbsp;·&nbsp; <kbd>R</kbd> acampamento
   </div>
 </div>
 
@@ -89,6 +128,7 @@
   <div class="small">
     Segure <b>SHIFT</b> perto de uma parede para escalar<br>
     Acenda as fogueiras no caminho para virar checkpoint<br>
+    Colete <b>energéticos</b> e <b>bandagens</b> · cuidado com o <b>frio</b> lá em cima<br>
     <i style="opacity:.7">se o mouse não girar, arraste com o botão esquerdo</i>
   </div>
 </div>
@@ -101,6 +141,11 @@
 <div class="overlay hidden" id="win">
   <h1>no <em>topo</em>!</h1>
   <div class="stat" id="winTime">1:23</div>
+  <div id="winStats">
+    <div><b id="winAlt">0</b><span>altitude</span></div>
+    <div><b id="winItems">0</b><span>itens usados</span></div>
+    <div><b id="winFalls">0</b><span>quedas</span></div>
+  </div>
   <div class="sub">você venceu a montanha</div>
   <div class="cta">escalar de novo</div>
 </div>
@@ -751,7 +796,11 @@ const player = {
   climbing: false,
   stamina: STAM_MAX,
   yaw: 0,
-  yawTarget: 0
+  yawTarget: 0,
+  injured: false,
+  cold: false,
+  warmth: 0,
+  falls: 0
 };
 
 let state = 'menu';
@@ -763,6 +812,394 @@ let camDist = 13.5;
 let menuT = 0;
 let toastTimer = 0;
 let lockBlocked = false;
+
+/* ============================================================
+   EXPEDIÇÃO — zonas, clima, itens e companheiros (co-op)
+   ============================================================ */
+const elZone     = document.getElementById('zone');
+const elZoneName = document.getElementById('zoneName');
+const elZoneSub  = elZone.querySelector('span');
+const elChat     = document.getElementById('chat');
+const elChipCold = document.getElementById('chipCold');
+const elChipHurt = document.getElementById('chipHurt');
+const elSlotE    = document.getElementById('slotE');
+const elSlotB    = document.getElementById('slotB');
+const elNEnergy  = document.getElementById('nEnergy');
+const elNBandage = document.getElementById('nBandage');
+
+const inv = { energy: 1, bandage: 1 };
+const stats = { items: 0, used: 0 };
+
+function updateInvUI(){
+  elNEnergy.textContent = '×' + inv.energy;
+  elNBandage.textContent = '×' + inv.bandage;
+  elSlotE.classList.toggle('have', inv.energy > 0);
+  elSlotB.classList.toggle('have', inv.bandage > 0);
+}
+
+/* ---------------- conversa ---------------- */
+function say(name, color, text){
+  const d = document.createElement('div');
+  d.className = 'msg';
+  d.innerHTML = '<b style="color:' + color + '">' + name + '</b> ' + text;
+  elChat.appendChild(d);
+  while (elChat.children.length > 4) elChat.removeChild(elChat.firstChild);
+  requestAnimationFrame(()=>d.classList.add('on'));
+  setTimeout(()=>{ d.classList.remove('on'); setTimeout(()=>d.remove(), 500); }, 5200);
+}
+
+const ZONE_LINES = {
+  1: ['a mata é linda', 'cuidado com as cobras', 'sente a floresta'],
+  2: ['parede lisa, hein', 'segura firme!', 'tá ficando íngreme'],
+  3: ['tá congelando!', 'neve! não para', 'meus dedos...'],
+  4: ['eu vejo o topo!', 'vamos, quase lá', 'a vista é surreal']
+};
+const PICK_LINES = ['boa!', 'guarda pra depois', 'isso vai servir', 'mais um pra conta'];
+const HURT_LINES = ['cuidado!', 'você tá bem?', 'isso vai doer amanhã', 'levanta!'];
+
+function sayRandom(lines){
+  if (!mates.length || !lines || !lines.length) return;
+  const m = mates[(Math.random()*mates.length)|0];
+  say(m.name, m.color, lines[(Math.random()*lines.length)|0]);
+}
+
+/* ---------------- zonas ---------------- */
+const ZONES = [
+  { name:'praia', min:0,   sub:'nível do mar' },
+  { name:'mata',  min:20,  sub:'floresta úmida' },
+  { name:'rocha', min:46,  sub:'parede de pedra' },
+  { name:'neve',  min:76,  sub:'linha da neve' },
+  { name:'cume',  min:100, sub:'o topo' }
+];
+let zoneIdx = -1;
+let zoneFade = 0;
+
+function zoneAt(alt){
+  let idx = 0;
+  for (let i=0;i<ZONES.length;i++) if (alt >= ZONES[i].min) idx = i;
+  return idx;
+}
+
+function updateZone(dt){
+  const alt = Math.max(0, player.pos.y - PLAYER_R);
+  const zi = zoneAt(alt);
+  if (zi !== zoneIdx){
+    zoneIdx = zi;
+    elZoneName.textContent = ZONES[zi].name;
+    elZoneSub.textContent = ZONES[zi].sub;
+    elZone.style.opacity = '1';
+    zoneFade = 4.2;
+    if (state === 'play' && zi > 0) sayRandom(ZONE_LINES[zi]);
+  }
+  if (zoneFade > 0){
+    zoneFade -= dt;
+    if (zoneFade <= 0) elZone.style.opacity = '0';
+  }
+}
+
+/* ---------------- itens ---------------- */
+const itemsGroup = new THREE.Group();
+scene.add(itemsGroup);
+const items = [];
+
+function makeItemMesh(type){
+  const g = new THREE.Group();
+  if (type === 'energy'){
+    const can = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.16, 0.16, 0.5, 12),
+      new THREE.MeshStandardMaterial({ color:0x2bb9a0, metalness:0.45, roughness:0.32,
+        emissive:0x1f8f7c, emissiveIntensity:0.9 })
+    );
+    const band = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.172, 0.172, 0.13, 12),
+      new THREE.MeshStandardMaterial({ color:0xffd447, emissive:0x6b5200, emissiveIntensity:0.6 })
+    );
+    band.position.y = 0.07;
+    g.add(can, band);
+  } else {
+    const roll = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.14, 0.14, 0.42, 14),
+      new THREE.MeshStandardMaterial({ color:0xfff3e8, roughness:0.7, emissive:0x6b4a3a, emissiveIntensity:0.35 })
+    );
+    roll.rotation.z = Math.PI/2;
+    const cross = new THREE.Mesh(
+      new THREE.BoxGeometry(0.13, 0.13, 0.44),
+      new THREE.MeshStandardMaterial({ color:0xff8a8a, emissive:0x6a2020, emissiveIntensity:0.4 })
+    );
+    g.add(roll, cross);
+  }
+  const halo = new THREE.Mesh(
+    new THREE.RingGeometry(0.4, 0.52, 26),
+    new THREE.MeshBasicMaterial({ color: type === 'energy' ? 0x8ff5df : 0xffd0c0,
+      transparent:true, opacity:0.55, side:THREE.DoubleSide, depthWrite:false })
+  );
+  halo.rotation.x = -Math.PI/2;
+  halo.position.y = -0.62;
+  g.add(halo);
+  return g;
+}
+
+function spawnItems(){
+  for (const it of items) itemsGroup.remove(it.mesh);
+  items.length = 0;
+  const COUNT = 18;
+  for (let i=0;i<COUNT;i++){
+    const hTarget = 5 + i * (summit.y - 12) / (COUNT - 1);
+    const ang = SPAWN_ANGLE + (Math.random()-0.5) * 1.15;
+    const spot = findCampSpot(hTarget, ang);
+    if (!spot) continue;
+    const x = spot.x + (Math.random()-0.5)*7;
+    const z = spot.z + (Math.random()-0.5)*7;
+    const type = Math.random() < 0.64 ? 'energy' : 'bandage';
+    const mesh = makeItemMesh(type);
+    const baseY = terrainH(x, z) + 1.0;
+    mesh.position.set(x, baseY, z);
+    itemsGroup.add(mesh);
+    items.push({ type, mesh, taken:false, baseY, phase: Math.random()*6.28 });
+  }
+}
+
+function updateItems(dt, t){
+  for (const it of items){
+    if (it.taken) continue;
+    it.mesh.rotation.y += dt * 1.4;
+    it.mesh.position.y = it.baseY + Math.sin(t*2 + it.phase) * 0.16;
+    const dx = player.pos.x - it.mesh.position.x;
+    const dz = player.pos.z - it.mesh.position.z;
+    if (Math.hypot(dx, dz) < 2.7 && Math.abs(player.pos.y - it.mesh.position.y) < 5){
+      it.taken = true;
+      it.mesh.visible = false;
+      inv[it.type]++;
+      stats.items++;
+      updateInvUI();
+      toast(it.type === 'energy' ? '+ energético' : '+ bandagem');
+      sayRandom(PICK_LINES);
+    }
+  }
+}
+
+function useEnergy(){
+  if (state !== 'play' || paused) return;
+  if (inv.energy <= 0){ toast('sem energético'); return; }
+  if (player.stamina > STAM_MAX - 4){ toast('stamina cheia'); return; }
+  inv.energy--;
+  stats.used++;
+  player.stamina = Math.min(STAM_MAX, player.stamina + 55);
+  updateInvUI();
+  toast('energético · stamina');
+}
+
+function useBandage(){
+  if (state !== 'play' || paused) return;
+  if (inv.bandage <= 0){ toast('sem bandagem'); return; }
+  if (!player.injured && player.stamina > STAM_MAX - 4){ toast('nada pra tratar'); return; }
+  inv.bandage--;
+  stats.used++;
+  const cured = player.injured;
+  player.injured = false;
+  player.stamina = Math.min(STAM_MAX, player.stamina + 18);
+  elChipHurt.classList.remove('on');
+  updateInvUI();
+  toast(cured ? 'perna tratada' : 'bandagem usada');
+}
+
+/* ---------------- companheiros ---------------- */
+const COMPANIONS = [
+  { name:'BIA',  color:'#ff9a4d', jacket:0xff8a3d, skin:0x8ec5e8, hat:0x6b3fa0 },
+  { name:'TOCO', color:'#ff6fae', jacket:0xff5a8a, skin:0xf2a35e, hat:0x2f9e6b },
+  { name:'LILA', color:'#b48bff', jacket:0x9a6bff, skin:0xd98ab0, hat:0xffd447 }
+];
+
+function makeClimber(pal){
+  const g = new THREE.Group();
+  const rig = new THREE.Group();
+  rig.scale.setScalar(0.86);
+  g.add(rig);
+
+  const mat = (c, r=0.75)=>new THREE.MeshStandardMaterial({ color:c, roughness:r });
+  const white = mat(0xfff6fb, 0.4);
+  const dark  = mat(0x24132f, 0.5);
+
+  const torso = new THREE.Mesh(new THREE.SphereGeometry(0.6, 20, 16), mat(pal.jacket));
+  torso.scale.set(1, 0.95, 0.86);
+  rig.add(torso);
+
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.6, 22, 18), mat(pal.skin, 0.6));
+  head.position.y = 0.82;
+  head.scale.set(1, 0.96, 0.96);
+  rig.add(head);
+
+  for (const sx of [-0.21, 0.21]){
+    const e = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 10), white);
+    e.position.set(sx, 0.9, 0.5);
+    e.scale.set(1, 1.1, 0.6);
+    rig.add(e);
+    const p = new THREE.Mesh(new THREE.SphereGeometry(0.065, 10, 8), dark);
+    p.position.set(sx, 0.89, 0.585);
+    rig.add(p);
+  }
+
+  const beanie = new THREE.Mesh(
+    new THREE.SphereGeometry(0.56, 18, 12, 0, Math.PI*2, 0, Math.PI*0.5),
+    mat(pal.hat, 0.85)
+  );
+  beanie.position.y = 1.06;
+  beanie.scale.set(1.02, 0.85, 1);
+  rig.add(beanie);
+  const pom = new THREE.Mesh(new THREE.SphereGeometry(0.12, 10, 8), white);
+  pom.position.y = 1.52;
+  rig.add(pom);
+
+  function limb(x, y, len, rad, m){
+    const pivot = new THREE.Group();
+    pivot.position.set(x, y, 0);
+    const seg = new THREE.Mesh(new THREE.CapsuleGeometry(rad, len, 6, 10), m);
+    seg.position.y = -len*0.5 - rad;
+    pivot.add(seg);
+    rig.add(pivot);
+    return pivot;
+  }
+  const armL = limb(-0.6, 0.2, 0.4, 0.13, mat(pal.jacket));
+  const armR = limb( 0.6, 0.2, 0.4, 0.13, mat(pal.jacket));
+  const legL = limb(-0.24, -0.45, 0.32, 0.13, mat(0x3a2450));
+  const legR = limb( 0.24, -0.45, 0.32, 0.13, mat(0x3a2450));
+
+  const pack = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.75, 0.4), mat(0x5c3596, 0.85));
+  pack.position.set(0, 0.12, -0.52);
+  rig.add(pack);
+  const roll = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.85, 8), mat(0xff8a3d, 0.85));
+  roll.rotation.z = Math.PI/2;
+  roll.position.set(0, 0.53, -0.55);
+  rig.add(roll);
+
+  rig.traverse(o=>{ if (o.isMesh) o.castShadow = true; });
+  return { g, rig, armL, armR, legL, legR };
+}
+
+const mates = [];
+const MATE_SPREAD = [0.55, 1.55, -1.35];
+
+function resetMates(){
+  for (const m of mates) scene.remove(m.g);
+  mates.length = 0;
+  COMPANIONS.forEach((pal, i)=>{
+    const c = makeClimber(pal);
+    const ang = player.yaw + MATE_SPREAD[i];
+    const x = player.pos.x + Math.sin(ang)*3.1;
+    const z = player.pos.z + Math.cos(ang)*3.1;
+    c.g.position.set(x, terrainH(x,z) + 1.0, z);
+    c.g.rotation.y = player.yaw;
+    scene.add(c.g);
+    mates.push({
+      ...c, name: pal.name, color: pal.color,
+      x, z, phase: Math.random()*6.28
+    });
+  });
+}
+
+function updateMates(dt, t){
+  mates.forEach((m, i)=>{
+    const p = player.pos;
+    const ang = player.yaw + MATE_SPREAD[i];
+    const rad = 3.1;
+    const tx = p.x + Math.sin(ang)*rad;
+    const tz = p.z + Math.cos(ang)*rad;
+    const k = 1 - Math.exp(-4.5*dt);
+    m.x = lerp(m.x, tx, k);
+    m.z = lerp(m.z, tz, k);
+    const gy = terrainH(m.x, m.z) + 1.0;
+    m.g.position.x = m.x;
+    m.g.position.z = m.z;
+    m.g.position.y = lerp(m.g.position.y, gy, 1 - Math.exp(-9*dt));
+
+    const dx = p.x - m.x, dz = p.z - m.z;
+    let dy = Math.atan2(dx, dz) - m.g.rotation.y;
+    while (dy >  Math.PI) dy -= Math.PI*2;
+    while (dy < -Math.PI) dy += Math.PI*2;
+    m.g.rotation.y += dy * (1 - Math.exp(-6*dt));
+
+    const moving = Math.hypot(dx, dz) > 2.2;
+    const wt = t*9 + m.phase;
+    const amp = moving ? 0.85 : 0.12;
+    m.armL.rotation.x =  Math.sin(wt)*amp - 0.12;
+    m.armR.rotation.x = -Math.sin(wt)*amp - 0.12;
+    m.legL.rotation.x = -Math.sin(wt)*amp*1.15;
+    m.legR.rotation.x =  Math.sin(wt)*amp*1.15;
+    m.rig.position.y = Math.abs(Math.sin(wt))*0.07*amp;
+
+    if (Math.hypot(dx, dz) > 16){
+      m.x = p.x + Math.sin(ang)*4.0;
+      m.z = p.z + Math.cos(ang)*4.0;
+      m.g.position.y = terrainH(m.x, m.z) + 1.0;
+    }
+  });
+}
+
+/* ---------------- clima ---------------- */
+function updateClimate(dt){
+  const alt = player.pos.y - PLAYER_R;
+  if (player.warmth > 0) player.warmth = Math.max(0, player.warmth - dt);
+  const cold = alt > 76 && player.warmth <= 0;
+  if (cold && !player.cold){
+    player.cold = true;
+    toast('frio · procure uma fogueira');
+    sayRandom(['tá congelando!', 'encosta no fogo!', 'meus dedos...']);
+  } else if (!cold && player.cold){
+    player.cold = false;
+  }
+  elChipCold.classList.toggle('on', cold);
+  elChipHurt.classList.toggle('on', player.injured);
+}
+
+/* ---------------- neve ---------------- */
+let snow = null;
+function makeSnow(){
+  const n = 900;
+  const pos = new Float32Array(n*3);
+  for (let i=0;i<n;i++){
+    pos[i*3]   = (Math.random()-0.5)*70;
+    pos[i*3+1] = Math.random()*40;
+    pos[i*3+2] = (Math.random()-0.5)*70;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const mat = new THREE.PointsMaterial({ color:0xffffff, size:0.22, transparent:true,
+    opacity:0, depthWrite:false, sizeAttenuation:true });
+  snow = new THREE.Points(geo, mat);
+  snow.frustumCulled = false;
+  scene.add(snow);
+}
+makeSnow();
+
+function updateSnow(dt){
+  if (!snow) return;
+  const alt = player.pos.y - PLAYER_R;
+  const target = clamp((alt - 62) / 18, 0, 1) * 0.85;
+  snow.material.opacity = lerp(snow.material.opacity, target, 1 - Math.exp(-dt*2));
+  snow.visible = snow.material.opacity > 0.02;
+  if (!snow.visible) return;
+  snow.position.set(player.pos.x, player.pos.y, player.pos.z);
+  const arr = snow.geometry.attributes.position.array;
+  const now = performance.now()*0.001;
+  for (let i=0;i<arr.length;i+=3){
+    arr[i+1] -= (5 + (i % 9)) * dt;
+    arr[i]   += Math.sin(now*1.4 + i) * dt * 2.2;
+    if (arr[i+1] < -18){
+      arr[i+1] = 22;
+      arr[i]   = (Math.random()-0.5)*70;
+      arr[i+2] = (Math.random()-0.5)*70;
+    }
+    if (arr[i] >  35) arr[i] = -35;
+    if (arr[i] < -35) arr[i] =  35;
+    if (arr[i+2] >  35) arr[i+2] = -35;
+    if (arr[i+2] < -35) arr[i+2] =  35;
+  }
+  snow.geometry.attributes.position.needsUpdate = true;
+}
+
+updateInvUI();
+spawnItems();
+resetMates();
 
 const keys = { f:0, b:0, l:0, r:0, grab:false, q:0, e:0 };
 const wish = new THREE.Vector3();
@@ -807,6 +1244,8 @@ addEventListener('keydown', (e)=>{
     case 'KeyE': keys.e = 1; break;
     case 'ShiftLeft': case 'ShiftRight': keys.grab = true; break;
     case 'Space': e.preventDefault(); doJump(); break;
+    case 'Digit1': useEnergy(); break;
+    case 'Digit2': useBandage(); break;
     case 'KeyR': if (state === 'play') respawn(); break;
   }
 });
@@ -927,6 +1366,19 @@ function resetGame(){
   player.climbing = false;
   player.grounded = false;
   player.stamina = STAM_MAX;
+  player.injured = false;
+  player.cold = false;
+  player.warmth = 0;
+  player.falls = 0;
+  inv.energy = 1;
+  inv.bandage = 1;
+  stats.items = 0;
+  stats.used = 0;
+  updateInvUI();
+  elChipCold.classList.remove('on');
+  elChipHurt.classList.remove('on');
+  zoneIdx = -1;
+  zoneFade = 0;
   player.yaw = player.yawTarget = Math.PI/2 - SPAWN_ANGLE + Math.PI;
   elapsed = 0;
   camYaw = Math.PI/2 - SPAWN_ANGLE;
@@ -936,6 +1388,9 @@ function resetGame(){
   paused = false;
   ovWin.classList.add('hidden');
   ovPause.classList.add('hidden');
+  spawnItems();
+  resetMates();
+  updateZone(0);
   focusSun(player.pos.x, player.pos.y, player.pos.z);
   syncCamera(0, true);
 }
@@ -994,8 +1449,9 @@ function updateGround(dt){
 
   const accel = player.grounded ? 15 : 4.5;
   const k = 1 - Math.exp(-accel*dt);
-  player.vel.x = lerp(player.vel.x, wish.x*WALK_SPEED, k);
-  player.vel.z = lerp(player.vel.z, wish.z*WALK_SPEED, k);
+  const walkSpeed = WALK_SPEED * (player.injured ? 0.62 : 1);
+  player.vel.x = lerp(player.vel.x, wish.x*walkSpeed, k);
+  player.vel.z = lerp(player.vel.z, wish.z*walkSpeed, k);
 
   if (player.grounded && nrm.y < 0.62){
     const down = new THREE.Vector3(0,1,0).addScaledVector(nrm, -nrm.y).normalize().negate();
@@ -1028,8 +1484,11 @@ function updateGround(dt){
     player.pos.y = gh;
     if (!wasGrounded && vyBefore < -27){
       flash();
+      player.falls++;
+      player.injured = true;
       player.stamina = Math.max(0, player.stamina - 40);
-      toast('queda feia!');
+      toast('perna quebrada · bandagem (2)');
+      sayRandom(HURT_LINES);
     }
     player.vel.y = 0;
     player.grounded = true;
@@ -1041,10 +1500,12 @@ function updateGround(dt){
   if (d > 240){ player.pos.x *= 240/d; player.pos.z *= 240/d; }
 
   const nAfter = normalAt(player.pos.x, player.pos.z);
+  const coldMul = player.cold ? 0.35 : 1;
+  const hurtMul = player.injured ? 0.7 : 1;
   if (player.grounded && nAfter.y > 0.66){
-    player.stamina = Math.min(STAM_MAX, player.stamina + 30*dt);
+    player.stamina = Math.min(STAM_MAX, player.stamina + 30*dt*coldMul*hurtMul);
   } else if (player.grounded){
-    player.stamina = Math.min(STAM_MAX, player.stamina + 8*dt);
+    player.stamina = Math.min(STAM_MAX, player.stamina + 8*dt*coldMul*hurtMul);
   }
 
   if (wish.lengthSq() > 0.01){
@@ -1084,13 +1545,14 @@ function updateClimb(dt){
 
   if (moving){
     mv.normalize();
-    const sp = CLIMB_SPEED * (0.55 + 0.45*clamp(player.stamina/30, 0, 1));
+    const sp = CLIMB_SPEED * (player.injured ? 0.65 : 1) * (0.55 + 0.45*clamp(player.stamina/30, 0, 1));
     // avança pela projeção horizontal (o heightmap só existe em x,z)
     player.anchor.x += mv.x * sp * dt;
     player.anchor.y += mv.z * sp * dt;
   }
 
-  const drain = 3.0 + (moving ? 3.6 : 0) + (iy > 0 ? 3.4 : 0);
+  const drain = 3.0 + (moving ? 3.6 : 0) + (iy > 0 ? 3.4 : 0)
+    + (player.cold ? 1.8 : 0) + (player.injured ? 1.2 : 0);
   player.stamina = Math.max(0, player.stamina - drain*dt);
 
   const nn = snapClimb();
@@ -1112,6 +1574,10 @@ function updateCamps(dt, t){
     c.light.intensity = 18 + Math.sin(t*13 + c.phase)*5;
 
     const d = player.pos.distanceTo(c.pos);
+    if (d < 7.5){
+      player.warmth = Math.max(player.warmth, 30);
+      if (player.cold) elChipCold.classList.remove('on');
+    }
     if (d < 6.5){
       elFireTip.style.opacity = '1';
       if (!c.active){
@@ -1119,7 +1585,11 @@ function updateCamps(dt, t){
         c.flame.material = c.flame.material.clone();
         checkpoint = c;
         player.stamina = STAM_MAX;
+        player.warmth = 30;
+        player.injured = false;
+        elChipHurt.classList.remove('on');
         toast('acampamento aceso · checkpoint');
+        sayRandom(['fogo! chegou a hora', 'aquece e vai', 'guarda o fôlego']);
       }
     }
   }
@@ -1149,6 +1619,11 @@ function update(dt){
   }
 
   updateCamps(dt, t);
+  updateItems(dt, t);
+  updateMates(dt, t);
+  updateClimate(dt);
+  updateZone(dt);
+  updateSnow(dt);
 
   let dy = player.yawTarget - player.yaw;
   while (dy >  Math.PI) dy -= Math.PI*2;
@@ -1302,6 +1777,9 @@ function win(){
   if (document.pointerLockElement) document.exitPointerLock();
   const mm = Math.floor(elapsed/60), ss = Math.floor(elapsed%60);
   document.getElementById('winTime').textContent = 'tempo: ' + mm + ':' + String(ss).padStart(2,'0');
+  document.getElementById('winAlt').textContent = Math.round(player.pos.y - PLAYER_R) + ' m';
+  document.getElementById('winItems').textContent = stats.used;
+  document.getElementById('winFalls').textContent = player.falls;
   ovWin.classList.remove('hidden');
 }
 
@@ -1328,6 +1806,7 @@ addEventListener('resize', ()=>{
 syncCamera(0, true);
 window.__dbg = {
   scene, sun, renderer, camera, player, terrainH, camps, keys, update, resetGame, respawn, syncCamera, charGroup,
+  items, mates, inv, stats, useEnergy, useBandage, spawnItems, say,
   get camYaw(){ return camYaw; }, set camYaw(v){ camYaw = v; },
   get paused(){ return paused; }, get state(){ return state; }
 };

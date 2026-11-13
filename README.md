@@ -32,6 +32,8 @@ Também dá para abrir o `index.html` direto — precisa de internet só para ca
 | `WASD` | andar |
 | `SHIFT` | segurar / escalar (perto de uma parede) |
 | `ESPAÇO` | pular / saltar da parede |
+| `1` | usar energético (+stamina) |
+| `2` | usar bandagem (cura lesão) |
 | `MOUSE` | olhar (pointer lock ou arrastando com o botão esquerdo) |
 | `Q` `E` | girar a câmera |
 | `RODA` | zoom |
@@ -44,13 +46,22 @@ Também dá para abrir o `index.html` direto — precisa de internet só para ca
 ## O que tem no jogo
 
 - **Uma montanha só**, numa ilha, com biomas por altitude: praia, mata, rocha e neve no cume.
+- **Expedição cooperativa**: você e mais 3 alpinistas (BIA, TOCO e LILA), cada um com roupa e
+  mochila próprias, que escalam junto, comentam o caminho e aparecem no HUD de conversa.
+- **Itens pelo caminho**: **energéticos** (tecla `1`, recuperam stamina) e **bandagens**
+  (tecla `2`, curam perna quebrada). Os itens brilham no cenário.
+- **Zonas por altitude** com aviso na tela: praia → mata → rocha → neve → cume.
+- **Frio**: acima da linha da neve a stamina regenera devagar e drena mais rápido.
+  Fogueiras aquecem e curam a lesão.
+- **Lesão**: queda feia quebra a perna — você anda e escala mais devagar até usar bandagem.
+- **Neve** em partículas e **clima** que mudam conforme a altitude.
 - **Personagem estilo escoteiro do PEAK**: cabeça redonda, óculos, gorro, jaqueta e mochila com
   saco de dormir e bandeirinha.
 - **Escalada**: segure `SHIFT` numa parede, suba/desça/lateralize pela superfície.
   Quanto mais íngreme, mais devagar (e mais stamina).
 - **Stamina**: cai escalando, regenera em platôs — planeje as paradas.
-- **Acampamentos**: 3 fogueiras no caminho viram checkpoint e enchem a stamina.
-- **Queda feia** desconta stamina; **`R`** te devolve ao último acampamento.
+- **Acampamentos**: 3 fogueiras no caminho viram checkpoint, enchem a stamina e curam.
+- **Tela de vitória** com tempo, altitude, itens usados e quedas.
 - Água com ondas, ilhas ao fundo, árvores, nuvens e pássaros.
 
 ## Como funciona (por baixo)
