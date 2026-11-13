@@ -34,6 +34,9 @@ Também dá para abrir o `index.html` direto — precisa de internet só para ca
 | `ESPAÇO` | pular / saltar da parede |
 | `1` | usar energético (+stamina) |
 | `2` | usar bandagem (cura lesão) |
+| `3` | comer lanche (+fome) |
+| `F` | fincar pitão na parede (corda salva quedas) |
+| `M` | ligar/desligar som |
 | `MOUSE` | olhar (pointer lock ou arrastando com o botão esquerdo) |
 | `Q` `E` | girar a câmera |
 | `RODA` | zoom |
@@ -48,20 +51,29 @@ Também dá para abrir o `index.html` direto — precisa de internet só para ca
 - **Uma montanha só**, numa ilha, com biomas por altitude: praia, mata, rocha e neve no cume.
 - **Expedição cooperativa**: você e mais 3 alpinistas (BIA, TOCO e LILA), cada um com roupa e
   mochila próprias, que escalam junto, comentam o caminho e aparecem no HUD de conversa.
-- **Itens pelo caminho**: **energéticos** (tecla `1`, recuperam stamina) e **bandagens**
-  (tecla `2`, curam perna quebrada). Os itens brilham no cenário.
-- **Zonas por altitude** com aviso na tela: praia → mata → rocha → neve → cume.
+- **Itens pelo caminho**: **energéticos** (`1`, stamina), **lanches** (`3`, fome) e **bandagens**
+  (`2`, curam perna quebrada). Os itens brilham no cenário.
+- **Fome**: cai com o tempo, escalando e no frio; com fome a stamina regenera muito devagar.
+  Lanches e acampamentos enchem a barriga.
+- **Pitões e corda** (`F`): finque um pitão na parede enquanto escala. Se você cair perto dele,
+  a corda te segura e você fica pendurado — use `W`/`S` para subir/descer pela corda e `ESPAÇO`
+  para soltar. São 6 pitões por escalada.
+- **Zonas por altitude** com aviso na tela e **objetivo atual**: praia → mata → rocha → neve → cume.
+- **Clima por altitude**: névoa mais fria e fechada, luz azulada, neve em partículas e tempestade
+  no topo.
 - **Frio**: acima da linha da neve a stamina regenera devagar e drena mais rápido.
-  Fogueiras aquecem e curam a lesão.
+  Fogueiras aquecem, curam a lesão e alimentam.
 - **Lesão**: queda feia quebra a perna — você anda e escala mais devagar até usar bandagem.
-- **Neve** em partículas e **clima** que mudam conforme a altitude.
 - **Personagem estilo escoteiro do PEAK**: cabeça redonda, óculos, gorro, jaqueta e mochila com
-  saco de dormir e bandeirinha.
+  saco de dormir e bandeirinha. Dá para escolher a cor da jaqueta no menu.
 - **Escalada**: segure `SHIFT` numa parede, suba/desça/lateralize pela superfície.
   Quanto mais íngreme, mais devagar (e mais stamina).
 - **Stamina**: cai escalando, regenera em platôs — planeje as paradas.
 - **Acampamentos**: 3 fogueiras no caminho viram checkpoint, enchem a stamina e curam.
-- **Tela de vitória** com tempo, altitude, itens usados e quedas.
+- **Áudio procedural** (WebAudio): vento por altitude, fogueira, passos, escalada, itens,
+  pitão e corda. `M` silencia.
+- **Tela de vitória** com tempo, altitude, itens usados, quedas e **recorde salvo** no navegador.
+- **Biomas com props**: palmeiras, samambaias, arbustos, pedras, gelo no topo e placas de trilha.
 - Água com ondas, ilhas ao fundo, árvores, nuvens e pássaros.
 
 ## Como funciona (por baixo)
@@ -75,10 +87,10 @@ Também dá para abrir o `index.html` direto — precisa de internet só para ca
 
 ## Próximos passos possíveis
 
-- Multijogador (o coração de PEAK) com WebSocket
-- Sistema de lesão / resgate
-- Corda, pitons e equipamento
-- Mais biomas e um cume com "endgame"
+- Multijogador real (o coração de PEAK) com WebSocket
+- Escalada em dupla com corda conectando dois alpinistas
+- Mais eventos aleatórios (tempestade, deslizamento, resgate)
+- Cume com "endgame" e descida
 
 ## Stack
 
