@@ -3,8 +3,8 @@
 ![preview](preview.jpg)
 
 Um jogo de escalada em 3D feito em **um único arquivo HTML** com [Three.js](https://threejs.org/),
-inspirado em **PEAK** (Aggro Crab & Landfall): uma ilha, uma montanha, um cume — e uma
-**stamina** que não deixa você errar.
+inspirado em **PEAK** (Aggro Crab & Landfall): uma montanha, um arquipélago cheio de baús,
+um barco e uma **stamina** que não deixa você errar.
 
 > Projeto de fã, feito do zero. Não é afiliado nem oficialmente ligado a PEAK.
 
@@ -36,9 +36,10 @@ Também dá para abrir o `index.html` direto — precisa de internet só para ca
 | `2` | usar bandagem (cura lesão) |
 | `3` | comer lanche (+fome) |
 | `F` | fincar pitão na parede (corda salva quedas) |
+| `E` | abrir baú / entrar no barco / desembarcar / usar estátua |
 | `M` | ligar/desligar som |
 | `MOUSE` | olhar (pointer lock ou arrastando com o botão esquerdo) |
-| `Q` `E` | girar a câmera |
+| `Q` | girar a câmera |
 | `RODA` | zoom |
 | `R` | voltar ao último acampamento |
 | `ESC` | pausar |
@@ -48,9 +49,17 @@ Também dá para abrir o `index.html` direto — precisa de internet só para ca
 
 ## O que tem no jogo
 
-- **Uma montanha só**, numa ilha, com biomas por altitude: praia, mata, rocha e neve no cume.
-- **Expedição cooperativa**: você e mais 3 alpinistas (BIA, TOCO e LILA), cada um com roupa e
-  mochila próprias, que escalam junto, comentam o caminho e aparecem no HUD de conversa.
+- **Uma montanha principal** com biomas por altitude: praia, mata, rocha e neve no cume.
+- **Arquipélago**: 5 ilhas espalhadas pelo mar (coco, névoa, gelo, perdida e uma ilhota),
+  com vegetação, gelo, ruínas e praias próprias.
+- **24 baús** espalhados pela ilha principal e pelas ilhas — cada um com feixe de luz dourado.
+  Chegue perto e aperte `E` para abrir: energéticos, lanches, bandagens, pitões e, às vezes,
+  uma **relíquia antiga** que aumenta a stamina máxima de vez.
+- **Barco**: na praia perto do acidente. Aperte `E` para entrar, `W` acelera, `A`/`D` viram e
+  `E` desembarca na costa. Sem barco, a água funda te segura.
+- **Bússola de baú** no canto da tela apontando para o baú fechado mais próximo, com a distância.
+- **Estátua antiga** na ilha perdida: `E` concede +12 de stamina máxima e cura tudo.
+- **Local do acidente**: avião quebrado, caixotes e um baú no começo — o ponto de partida.
 - **Itens pelo caminho**: **energéticos** (`1`, stamina), **lanches** (`3`, fome) e **bandagens**
   (`2`, curam perna quebrada). Os itens brilham no cenário.
 - **Fome**: cai com o tempo, escalando e no frio; com fome a stamina regenera muito devagar.
@@ -71,17 +80,19 @@ Também dá para abrir o `index.html` direto — precisa de internet só para ca
 - **Stamina**: cai escalando, regenera em platôs — planeje as paradas.
 - **Acampamentos**: 3 fogueiras no caminho viram checkpoint, enchem a stamina e curam.
 - **Áudio procedural** (WebAudio): vento por altitude, fogueira, passos, escalada, itens,
-  pitão e corda. `M` silencia.
-- **Tela de vitória** com tempo, altitude, itens usados, quedas e **recorde salvo** no navegador.
+  pitão, corda e baú. `M` silencia.
+- **Tela de vitória** com tempo, altitude, itens usados, quedas, baús abertos e **recorde salvo**.
 - **Biomas com props**: palmeiras, samambaias, arbustos, pedras, gelo no topo e placas de trilha.
 - Água com ondas, ilhas ao fundo, árvores, nuvens e pássaros.
 
 ## Como funciona (por baixo)
 
-- **Terreno procedural:** heightmap analítico (cone + ruído + terraços + praia),
-  malha low-poly com cores por vértice.
-- **Física:** colisão por amostragem de altura, limite de degrau (não sobe paredão andando)
-  e escorregão em encostas íngremes.
+- **Terreno procedural:** heightmap analítico (cone + ruído + terraços + praia) para a montanha
+  principal e para cada ilha do arquipélago, com malha low-poly e cores por vértice.
+- **Física:** colisão por amostragem de altura, limite de degrau (não sobe paredão andando),
+  escorregão em encostas íngremes e bloqueio de água funda.
+- **Barco:** navegação simples com aceleração, arrasto, curva proporcional à velocidade e
+  desembarque automático na costa mais próxima.
 - **Escalada:** o jogador gruda na superfície e anda no plano tangente; a âncora é mantida em
   `(x, z)` e a altura vem do heightmap, então a velocidade é corrigida pela inclinação.
 
@@ -90,7 +101,7 @@ Também dá para abrir o `index.html` direto — precisa de internet só para ca
 - Multijogador real (o coração de PEAK) com WebSocket
 - Escalada em dupla com corda conectando dois alpinistas
 - Mais eventos aleatórios (tempestade, deslizamento, resgate)
-- Cume com "endgame" e descida
+- Mais ilhas, baús raros e um sistema de carga/mochila
 
 ## Stack
 

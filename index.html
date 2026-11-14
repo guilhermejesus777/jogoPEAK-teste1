@@ -93,6 +93,23 @@
     text-transform:uppercase; opacity:.75; background:rgba(18,5,38,.45); padding:6px 14px; border-radius:99px;
     white-space:nowrap; backdrop-filter:blur(6px); transition:opacity .4s; }
   #pitons{ font-size:10px; letter-spacing:.16em; opacity:.7; margin-top:8px; }
+  #chests{ font-size:10px; letter-spacing:.16em; opacity:.7; margin-top:5px; color:var(--gold); }
+  #prompt{ position:absolute; left:50%; bottom:112px; transform:translateX(-50%) translateY(6px); font-size:12px;
+    letter-spacing:.18em; text-transform:uppercase; padding:8px 18px; border-radius:99px; opacity:0;
+    background:rgba(18,5,38,.68); box-shadow:inset 0 0 0 1px rgba(255,212,71,.45);
+    backdrop-filter:blur(8px); transition:opacity .2s, transform .2s; white-space:nowrap; }
+  #prompt.on{ opacity:1; transform:translateX(-50%) translateY(0); }
+  #prompt kbd{ background:var(--gold); color:#2a123f; font-weight:800; }
+  #compass{ position:absolute; right:28px; top:76px; width:66px; height:66px; border-radius:50%;
+    background:rgba(18,5,38,.5); box-shadow:inset 0 0 0 1px rgba(255,255,255,.16); backdrop-filter:blur(6px);
+    display:flex; align-items:center; justify-content:center; flex-direction:column; }
+  #compassArrow{ width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent;
+    border-bottom:16px solid var(--gold); transform-origin:50% 60%; filter:drop-shadow(0 1px 4px rgba(0,0,0,.5)); }
+  #compassDist{ font-size:8.5px; letter-spacing:.12em; opacity:.7; margin-top:5px; }
+  #compass span.lbl{ font-size:7.5px; letter-spacing:.16em; opacity:.55; margin-top:2px; text-transform:uppercase; }
+  #chat{ display:none; }
+  #islandTag{ position:absolute; right:28px; top:150px; text-align:right; font-size:9.5px; letter-spacing:.22em;
+    text-transform:uppercase; opacity:.6; }
   #colors{ display:flex; gap:10px; margin-top:24px; }
   .sw{ width:26px; height:26px; border-radius:50%; cursor:pointer; pointer-events:auto;
     box-shadow:inset 0 0 0 2px rgba(255,255,255,.25); }
@@ -116,11 +133,18 @@
       <span class="chip hurt" id="chipHurt">lesionado</span>
     </div>
     <div id="pitons"><span id="pitonTxt">pitões ×6</span></div>
+    <div id="chests"><span id="chestTxt">baús 0/18</span></div>
   </div>
   <div id="tr">
     <div id="time">0:00</div>
     <div id="prog"><div id="progf"></div></div>
   </div>
+  <div id="compass">
+    <div id="compassArrow"></div>
+    <div id="compassDist">—</div>
+    <span class="lbl">baú</span>
+  </div>
+  <div id="islandTag">ilha principal</div>
   <div id="zone"><span>zona</span><b id="zoneName">praia</b></div>
   <div id="objective">acenda o primeiro acampamento</div>
   <div id="chat"></div>
@@ -130,9 +154,10 @@
     <div class="slot" id="slotS"><span class="k">3</span> lanche <b id="nSnack">×0</b></div>
   </div>
   <div id="fireTip">acampamento</div>
+  <div id="prompt"></div>
   <div id="hint">
     <kbd>WASD</kbd> mover &nbsp;·&nbsp; <kbd>SHIFT</kbd> escalar &nbsp;·&nbsp; <kbd>ESPAÇO</kbd> pular &nbsp;·&nbsp;
-    <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> itens &nbsp;·&nbsp; <kbd>F</kbd> pitão &nbsp;·&nbsp; <kbd>M</kbd> som &nbsp;·&nbsp;
+    <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> itens &nbsp;·&nbsp; <kbd>F</kbd> pitão &nbsp;·&nbsp; <kbd>E</kbd> baú/barco &nbsp;·&nbsp; <kbd>M</kbd> som &nbsp;·&nbsp;
     <kbd>MOUSE</kbd> olhar &nbsp;·&nbsp; <kbd>R</kbd> acampamento
   </div>
 </div>
@@ -150,6 +175,7 @@
     Segure <b>SHIFT</b> perto de uma parede para escalar<br>
     <b>F</b> finca um pitão que segura sua queda · acenda fogueiras para virar checkpoint<br>
     Colete <b>energéticos</b>, <b>lanches</b> e <b>bandagens</b> · cuidado com o <b>frio</b> lá em cima<br>
+    <b>E</b> abre baús · pegue o <b>barco</b> na praia e explore as ilhas<br>
     <i style="opacity:.7">se o mouse não girar, arraste com o botão esquerdo</i>
   </div>
 </div>
@@ -166,6 +192,7 @@
     <div><b id="winAlt">0</b><span>altitude</span></div>
     <div><b id="winItems">0</b><span>itens usados</span></div>
     <div><b id="winFalls">0</b><span>quedas</span></div>
+    <div><b id="winChests">0</b><span>baús</span></div>
   </div>
   <div id="winBest"></div>
   <div class="sub">você venceu a montanha</div>
@@ -212,11 +239,43 @@ const R = 112;          // raio médio
 const MAXH = 120;       // altura do cume
 const SEA = 0.35;
 
+/* ---------------- arquipélago ---------------- */
+const ISLANDS = [
+  { name:'ilha do coco',   x:Math.cos(1.10)*205, z:Math.sin(1.10)*205, r:34, h:15, seed:2.1,  biome:'tropical' },
+  { name:'ilha da névoa',  x:Math.cos(2.62)*242, z:Math.sin(2.62)*242, r:43, h:27, seed:5.3,  biome:'rocha'    },
+  { name:'ilha do gelo',   x:Math.cos(4.15)*258, z:Math.sin(4.15)*258, r:39, h:35, seed:8.7,  biome:'neve'     },
+  { name:'ilha perdida',   x:Math.cos(5.42)*218, z:Math.sin(5.42)*218, r:31, h:21, seed:11.2, biome:'ruína'    },
+  { name:'ilhota',         x:Math.cos(0.18)*276, z:Math.sin(0.18)*276, r:19, h:9,  seed:14.6, biome:'tropical' }
+];
+
 function islandRadius(ang){
   return R * (1 + 0.10*Math.sin(ang*3.0+0.6) + 0.05*Math.sin(ang*7.0-1.1));
 }
 
 function terrainH(x, z){
+  let out = mainIslandH(x, z);
+
+  for (let i=0;i<ISLANDS.length;i++){
+    const isl = ISLANDS[i];
+    const dx = x - isl.x, dz = z - isl.z;
+    const d = Math.hypot(dx, dz);
+    if (d > isl.r*1.22) continue;
+    const ang = Math.atan2(dz, dx);
+    const rad = isl.r * (1 + 0.11*Math.sin(ang*3 + isl.seed) + 0.055*Math.sin(ang*6 - isl.seed*0.7));
+    const shelf = 1.5 * (1 - smoothstep(rad, rad*1.16, d));
+    if (d >= rad){ out = Math.max(out, shelf); continue; }
+    const t = 1 - d/rad;
+    const cone = isl.h * Math.pow(t, 1.38);
+    const amp = (1.4 + isl.h*0.09) * smoothstep(0, 0.12, t);
+    const n = (fbm((x+isl.seed*13)*0.075, (z-isl.seed*9)*0.075) - 0.5) * 2 * amp;
+    const h = Math.max(0, cone + n + shelf + 0.55);
+    out = Math.max(out, h);
+  }
+
+  return out;
+}
+
+function mainIslandH(x, z){
   const d = Math.hypot(x, z);
   const ang = Math.atan2(z, x);
   const rad = islandRadius(ang);
@@ -242,6 +301,13 @@ function terrainH(x, z){
   return Math.max(0, h + shelf);
 }
 
+function islandAt(x, z){
+  for (const isl of ISLANDS){
+    if (Math.hypot(x-isl.x, z-isl.z) < isl.r*1.18) return isl;
+  }
+  return Math.hypot(x,z) < R*1.2 ? null : null;
+}
+
 function normalAt(x, z, out = new THREE.Vector3()){
   const e = 0.8;
   const hx = terrainH(x+e, z) - terrainH(x-e, z);
@@ -254,7 +320,7 @@ const PLAYER_R    = 1.05;
 const GRAV        = 34;
 const WALK_SPEED  = 9.5;
 const CLIMB_SPEED = 5.4;
-const STAM_MAX    = 100;
+let STAM_MAX    = 100;
 
 /* ============================================================
    CENA
@@ -628,6 +694,100 @@ signSpots.forEach((sp, i) => {
   scene.add(g);
 });
 
+/* ---------------- ilhas do arquipélago ---------------- */
+const islTmp = new THREE.Color();
+const islSand  = new THREE.Color(0xf0d9ab);
+const islGrass = new THREE.Color(0x4f8a55);
+const islRock  = new THREE.Color(0x8b5a72);
+const islSnow  = new THREE.Color(0xf4f8ff);
+const islMoss  = new THREE.Color(0x3f6b4a);
+
+ISLANDS.forEach(isl => {
+  const SIZEI = isl.r*2.55, SEGI = 76;
+  const g = new THREE.PlaneGeometry(SIZEI, SIZEI, SEGI, SEGI);
+  g.rotateX(-Math.PI/2);
+  const pa = g.attributes.position;
+  const ca = new Float32Array(pa.count*3);
+  for (let i=0;i<pa.count;i++){
+    const x = pa.getX(i) + isl.x, z = pa.getZ(i) + isl.z;
+    const h = terrainH(x,z);
+    pa.setY(i, h);
+    const jit = (vnoise(x*0.13+isl.seed, z*0.13-isl.seed)-0.5)*2.4;
+    const hh = h + jit;
+    islTmp.copy(islSand);
+    if (isl.biome === 'tropical'){
+      islTmp.lerp(islGrass, smoothstep(2.4, 6.0, hh));
+      islTmp.lerp(islRock, smoothstep(11, isl.h, hh));
+    } else if (isl.biome === 'rocha'){
+      islTmp.lerp(islMoss, smoothstep(2.2, 5.5, hh));
+      islTmp.lerp(islRock, smoothstep(7, isl.h*0.85, hh));
+    } else if (isl.biome === 'neve'){
+      islTmp.lerp(islRock, smoothstep(2.2, 5.0, hh));
+      islTmp.lerp(islSnow, smoothstep(6.0, 12.0, hh));
+    } else {
+      islTmp.lerp(islMoss, smoothstep(2.0, 5.0, hh));
+      islTmp.lerp(islRock, smoothstep(8, isl.h, hh)*0.7);
+    }
+    const v = 0.86 + 0.26*vnoise(x*2.1, z*2.1);
+    ca[i*3] = islTmp.r*v; ca[i*3+1] = islTmp.g*v; ca[i*3+2] = islTmp.b*v;
+  }
+  g.setAttribute('color', new THREE.BufferAttribute(ca, 3));
+  g.computeVertexNormals();
+  const mesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({
+    vertexColors:true, flatShading:true, roughness:0.97
+  }));
+  mesh.position.set(isl.x, 0, isl.z);
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  scene.add(mesh);
+
+  /* vegetação / gelo / ruínas */
+  const count = Math.round(isl.r*1.4);
+  for (let i=0;i<count;i++){
+    const a = Math.random()*Math.PI*2;
+    const d = Math.sqrt(Math.random())*isl.r*0.82;
+    const x = isl.x + Math.cos(a)*d, z = isl.z + Math.sin(a)*d;
+    const h = terrainH(x,z);
+    if (h < 1.5) continue;
+    const n = normalAt(x,z);
+    if (n.y < 0.6) continue;
+    if (isl.biome === 'tropical'){
+      if (i % 4 === 0){
+        const p = palmGeo(); p.position.set(x, h-0.1, z);
+        p.scale.setScalar(0.7+Math.random()*0.6); p.rotation.y = Math.random()*6.28;
+        p.traverse(o=>{ if(o.isMesh) o.castShadow = true; });
+        scene.add(p);
+      } else {
+        const f = fernGeo(); f.position.set(x, h-0.05, z);
+        f.scale.setScalar(0.7+Math.random()*0.8); f.rotation.y = Math.random()*6.28;
+        scene.add(f);
+      }
+    } else if (isl.biome === 'rocha'){
+      const tree = new THREE.Group();
+      const sc = 0.55+Math.random()*0.75;
+      const trunk = new THREE.Mesh(trunkGeo, trunkMat); trunk.position.y = 1.1;
+      const leaf = new THREE.Mesh(leafGeo, Math.random()>0.5?leafMatA:leafMatB); leaf.position.y = 3.5;
+      trunk.castShadow = leaf.castShadow = true;
+      tree.add(trunk, leaf); tree.position.set(x,h-0.1,z); tree.scale.setScalar(sc);
+      tree.rotation.y = Math.random()*6.28; scene.add(tree);
+    } else if (isl.biome === 'neve'){
+      const shard = new THREE.Mesh(new THREE.ConeGeometry(0.35+Math.random()*0.8, 1.2+Math.random()*3, 4), iceMat);
+      shard.position.set(x, h+0.5, z);
+      shard.rotation.set((Math.random()-0.5)*0.4, Math.random()*6.28, (Math.random()-0.5)*0.4);
+      shard.castShadow = true; scene.add(shard);
+    } else {
+      if (i % 5 === 0){
+        const col = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.62, 2.2+Math.random()*2.2, 7), rockMat);
+        col.position.set(x, h+1.1, z);
+        col.rotation.set((Math.random()-0.5)*0.25, Math.random()*6.28, (Math.random()-0.5)*0.25);
+        col.castShadow = true; scene.add(col);
+      } else {
+        const f = fernGeo(); f.position.set(x, h-0.05, z);
+        f.scale.setScalar(0.8+Math.random()*0.6); scene.add(f);
+      }
+    }
+  }
+});
+
 /* ---------------- ilhas distantes ---------------- */
 const farMat = new THREE.MeshStandardMaterial({ color:0x4a2f5e, roughness:1, flatShading:true });
 for (let i=0;i<8;i++){
@@ -942,7 +1102,8 @@ const player = {
   hanging: false,
   hangAnchor: null,
   ropeCd: 0,
-  starving: false
+  starving: false,
+  boat: false
 };
 
 let state = 'menu';
@@ -975,7 +1136,7 @@ const elPitonTxt = document.getElementById('pitonTxt');
 const elObjective= document.getElementById('objective');
 
 const inv = { energy: 1, bandage: 1, snack: 2 };
-const stats = { items: 0, used: 0 };
+const stats = { items: 0, used: 0, chests: 0, relics: 0 };
 let pitons = 6;
 let hunger = 100;
 
@@ -1407,6 +1568,7 @@ function sfx(kind){
     case 'eat':   playTone(330, 0.12, 'square', 0.05); break;
     case 'piton': playTone(1180, 0.09, 'square', 0.05); playNoise(0.12, 2400, 0.05); break;
     case 'rope':  playTone(180, 0.35, 'sawtooth', 0.09); break;
+    case 'chest': playTone(392,0.12,'triangle',0.09); setTimeout(()=>playTone(587,0.16,'triangle',0.09),90); setTimeout(()=>playTone(880,0.3,'triangle',0.10),200); break;
     case 'hurt':  playTone(90, 0.35, 'sawtooth', 0.12); playNoise(0.2, 200, 0.09, 'lowpass'); break;
     case 'win':   playTone(523,0.3,'triangle',0.10); setTimeout(()=>playTone(659,0.3,'triangle',0.10),140); setTimeout(()=>playTone(784,0.5,'triangle',0.12),280); break;
     case 'ui':    playTone(620, 0.06, 'sine', 0.05); break;
@@ -1433,9 +1595,7 @@ function updateAudio(dt, alt, speed, grounded, climbing, nearFire){
 
 /* ---------------- companheiros ---------------- */
 const COMPANIONS = [
-  { name:'BIA',  color:'#ff9a4d', jacket:0xff8a3d, skin:0x8ec5e8, hat:0x6b3fa0 },
-  { name:'TOCO', color:'#ff6fae', jacket:0xff5a8a, skin:0xf2a35e, hat:0x2f9e6b },
-  { name:'LILA', color:'#b48bff', jacket:0x9a6bff, skin:0xd98ab0, hat:0xffd447 }
+  /* co-op desativado por enquanto — os bonecos ficavam todos amontoados */
 ];
 
 function makeClimber(pal){
@@ -1563,6 +1723,568 @@ function updateMates(dt, t){
   });
 }
 
+/* ============================================================
+   ILHAS, BAÚS, ESTÁTUA E BARCO
+   ============================================================ */
+const elPrompt     = document.getElementById('prompt');
+const elChestTxt   = document.getElementById('chestTxt');
+const elCompassArr = document.getElementById('compassArrow');
+const elCompassDist= document.getElementById('compassDist');
+const elIslandTag  = document.getElementById('islandTag');
+
+/* ---------------- baús ---------------- */
+const chests = [];
+const chestsGroup = new THREE.Group();
+scene.add(chestsGroup);
+
+const chestWood = new THREE.MeshStandardMaterial({ color:0x7a4a2b, roughness:0.82, flatShading:true });
+const chestWoodDark = new THREE.MeshStandardMaterial({ color:0x4e2d1a, roughness:0.9, flatShading:true });
+const chestGold = new THREE.MeshStandardMaterial({ color:0xffcf4a, metalness:0.75, roughness:0.28,
+  emissive:0x6b4a00, emissiveIntensity:0.5 });
+const beamMat = new THREE.MeshBasicMaterial({ color:0xffd447, transparent:true, opacity:0.24,
+  blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide });
+
+/* ---------------- partículas de recompensa ---------------- */
+const bursts = [];
+function burstAt(x, y, z, color){
+  const n = 30;
+  const pos = new Float32Array(n*3);
+  const vel = [];
+  for (let i=0;i<n;i++){
+    pos[i*3] = 0; pos[i*3+1] = 0; pos[i*3+2] = 0;
+    const a = Math.random()*Math.PI*2;
+    const up = 2 + Math.random()*7;
+    const sp = 1.5 + Math.random()*4.5;
+    vel.push({ x:Math.cos(a)*sp, y:up, z:Math.sin(a)*sp });
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const m = new THREE.PointsMaterial({ color: color || 0xffd447, size:0.24, transparent:true,
+    opacity:1, depthWrite:false, blending:THREE.AdditiveBlending, sizeAttenuation:true });
+  const p = new THREE.Points(g, m);
+  p.position.set(x, y, z);
+  p.frustumCulled = false;
+  scene.add(p);
+  bursts.push({ p, vel, life:1.1, max:1.1 });
+}
+
+function updateBursts(dt){
+  for (let i=bursts.length-1;i>=0;i--){
+    const b = bursts[i];
+    b.life -= dt;
+    const arr = b.p.geometry.attributes.position.array;
+    for (let k=0;k<b.vel.length;k++){
+      const v = b.vel[k];
+      arr[k*3]   += v.x*dt;
+      arr[k*3+1] += v.y*dt;
+      arr[k*3+2] += v.z*dt;
+      v.y -= 11*dt;
+    }
+    b.p.geometry.attributes.position.needsUpdate = true;
+    b.p.material.opacity = Math.max(0, b.life/b.max);
+    if (b.life <= 0){
+      scene.remove(b.p);
+      b.p.geometry.dispose();
+      b.p.material.dispose();
+      bursts.splice(i,1);
+    }
+  }
+}
+
+function makeChest(){
+  const g = new THREE.Group();
+  const base = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.72, 0.85), chestWood);
+  base.position.y = 0.36;
+  const trim1 = new THREE.Mesh(new THREE.BoxGeometry(1.31, 0.1, 0.91), chestGold);
+  trim1.position.y = 0.06;
+  const trim2 = trim1.clone(); trim2.position.y = 0.68;
+  g.add(base, trim1, trim2);
+
+  const lidPivot = new THREE.Group();
+  lidPivot.position.set(0, 0.72, -0.42);
+  const lid = new THREE.Mesh(new THREE.BoxGeometry(1.28, 0.32, 0.88), chestWoodDark);
+  lid.position.set(0, 0.14, 0.43);
+  const lidTrim = new THREE.Mesh(new THREE.BoxGeometry(1.32, 0.08, 0.93), chestGold);
+  lidTrim.position.set(0, 0.3, 0.43);
+  lidPivot.add(lid, lidTrim);
+  g.add(lidPivot);
+
+  const lock = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.28, 0.12), chestGold);
+  lock.position.set(0, 0.57, 0.46);
+  g.add(lock);
+
+  const band1 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.78, 0.92), chestGold);
+  band1.position.set(-0.45, 0.38, 0);
+  const band2 = band1.clone(); band2.position.x = 0.45;
+  g.add(band1, band2);
+
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.02, 30, 5, 1, true), beamMat.clone());
+  beam.position.y = 15.4;
+  g.add(beam);
+
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.75, 1.0, 28),
+    new THREE.MeshBasicMaterial({ color:0xffd447, transparent:true, opacity:0.42,
+      side:THREE.DoubleSide, depthWrite:false }));
+  ring.rotation.x = -Math.PI/2;
+  ring.position.y = 0.04;
+  g.add(ring);
+
+  g.traverse(o=>{ if(o.isMesh && o !== beam && o !== ring) o.castShadow = true; });
+  return { g, lidPivot, beam, ring };
+}
+
+function findFlatSpot(cx, cz, rad, minH){
+  let best = null, bestScore = -1e9;
+  for (let i=0;i<70;i++){
+    const a = Math.random()*Math.PI*2;
+    const d = Math.sqrt(Math.random())*rad;
+    const x = cx + Math.cos(a)*d, z = cz + Math.sin(a)*d;
+    const h = terrainH(x,z);
+    if (h < minH) continue;
+    const n = normalAt(x,z);
+    const score = n.y*12 + h*0.02 + Math.random()*0.4;
+    if (score > bestScore){ bestScore = score; best = { x, z, h }; }
+  }
+  return best;
+}
+
+function addChest(x, z, island){
+  const parts = makeChest();
+  const y = terrainH(x,z);
+  parts.g.position.set(x, y, z);
+  parts.g.rotation.y = Math.random()*Math.PI*2;
+  parts.g.scale.setScalar(1.25);
+  chestsGroup.add(parts.g);
+  chests.push({
+    ...parts, x, y, z, opened:false, lidT:0, phase:Math.random()*6.28,
+    island: island ? island.name : 'ilha principal'
+  });
+}
+
+/* baús na ilha principal */
+const mainChestAlts = [6, 10, 16, 22, 30, 40, 54, 66];
+mainChestAlts.forEach((hTarget, i) => {
+  const ang = SPAWN_ANGLE + Math.sin(i*1.7+0.4)*0.95;
+  const spot = findCampSpot(hTarget, ang);
+  if (spot) addChest(spot.x, spot.z, null);
+});
+
+/* baús nas ilhas */
+ISLANDS.forEach(isl => {
+  for (let i=0;i<3;i++){
+    const spot = findFlatSpot(isl.x, isl.z, isl.r*0.78, 1.4);
+    if (spot) addChest(spot.x, spot.z, isl);
+  }
+});
+
+/* ---------------- estátua antiga ---------------- */
+const statueMat = new THREE.MeshStandardMaterial({ color:0x8f8a96, roughness:0.85, flatShading:true });
+const eyeMat = new THREE.MeshStandardMaterial({ color:0xffe08a, emissive:0xffc63d, emissiveIntensity:2.0 });
+let statue = null;
+
+{
+  const lost = ISLANDS[3];
+  const spot = findFlatSpot(lost.x, lost.z, lost.r*0.35, 6) || { x:lost.x, z:lost.z };
+  const g = new THREE.Group();
+  const ped = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.9, 1.1, 8), statueMat);
+  ped.position.y = 0.55;
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 1.05, 2.6, 7), statueMat);
+  body.position.y = 2.4;
+  const head = new THREE.Mesh(new THREE.DodecahedronGeometry(0.66, 0), statueMat);
+  head.position.y = 4.1;
+  const armL = new THREE.Mesh(new THREE.BoxGeometry(0.32, 1.6, 0.32), statueMat);
+  armL.position.set(-1.05, 2.8, 0); armL.rotation.z = 0.5;
+  const armR = armL.clone(); armR.position.x = 1.05; armR.rotation.z = -0.5;
+  const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 8), eyeMat);
+  eyeL.position.set(-0.22, 4.15, 0.6);
+  const eyeR = eyeL.clone(); eyeR.position.x = 0.22;
+  const halo = new THREE.Mesh(new THREE.RingGeometry(2.1, 2.5, 32),
+    new THREE.MeshBasicMaterial({ color:0xffd447, transparent:true, opacity:0.35,
+      side:THREE.DoubleSide, depthWrite:false }));
+  halo.rotation.x = -Math.PI/2; halo.position.y = 0.06;
+  ped.castShadow = body.castShadow = head.castShadow = true;
+  g.add(ped, body, head, armL, armR, eyeL, eyeR, halo);
+  g.position.set(spot.x, terrainH(spot.x, spot.z), spot.z);
+  g.rotation.y = Math.random()*6.28;
+  scene.add(g);
+  statue = { g, x:spot.x, z:spot.z, used:false, halo, eyes:[eyeL,eyeR] };
+}
+
+/* ---------------- barco ---------------- */
+const BOAT_MAX = 21;
+const boatDockAng = SPAWN_ANGLE;
+const boatDockD = islandRadius(boatDockAng)*1.135;
+const boatDock = {
+  x: Math.cos(boatDockAng)*boatDockD,
+  z: Math.sin(boatDockAng)*boatDockD
+};
+
+const boatGroup = new THREE.Group();
+scene.add(boatGroup);
+{
+  const hullMat = new THREE.MeshStandardMaterial({ color:0x8a4b2c, roughness:0.85, flatShading:true });
+  const hullDark = new THREE.MeshStandardMaterial({ color:0x5c2f1b, roughness:0.9, flatShading:true });
+  const sailMat = new THREE.MeshStandardMaterial({ color:0xfff2dc, roughness:0.9, side:THREE.DoubleSide });
+  const sailStripe = new THREE.MeshStandardMaterial({ color:0xff6fae, roughness:0.85, side:THREE.DoubleSide });
+
+  const hull = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.75, 4.6), hullMat);
+  hull.position.y = 0.35;
+  const bow = new THREE.Mesh(new THREE.ConeGeometry(1.25, 2.1, 4), hullMat);
+  bow.rotation.x = Math.PI/2; bow.rotation.y = Math.PI/4;
+  bow.position.set(0, 0.35, 3.0); bow.scale.set(1, 0.6, 1);
+  const back = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.7, 0.45), hullDark);
+  back.position.set(0, 0.5, -2.35);
+  const rim = new THREE.Mesh(new THREE.BoxGeometry(2.65, 0.16, 4.7), hullDark);
+  rim.position.y = 0.72;
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.11, 4.6, 7), hullDark);
+  mast.position.set(0, 3.0, 0.15);
+  const boom = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.7, 6), hullDark);
+  boom.rotation.z = Math.PI/2; boom.position.set(0, 4.3, 0.15);
+  const sail = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.9, 2.5), sailMat);
+  sail.position.set(-0.1, 3.1, 0.2);
+  const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.42, 2.5), sailStripe);
+  stripe.position.set(-0.12, 2.1, 0.2);
+  const lantern = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.34, 0.24),
+    new THREE.MeshStandardMaterial({ color:0xffd447, emissive:0xffa500, emissiveIntensity:2.2 }));
+  lantern.position.set(0, 1.1, 3.2);
+  const bench = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.14, 0.5), hullDark);
+  bench.position.set(0, 0.95, -1.1);
+  [hull,bow,back,rim,mast,boom,sail,stripe,lantern,bench].forEach(m=>{ m.castShadow = true; boatGroup.add(m); });
+  const boatLight = new THREE.PointLight(0xffb347, 8, 12, 2);
+  boatLight.position.set(0, 1.4, 3.2);
+  boatGroup.add(boatLight);
+}
+const boat = {
+  x: boatDock.x, z: boatDock.z, heading: boatDockAng, speed: 0, occupied: false,
+  dockX: boatDock.x, dockZ: boatDock.z, dockHeading: boatDockAng
+};
+boatGroup.position.set(boat.x, SEA + 0.12, boat.z);
+boatGroup.rotation.y = boat.heading;
+
+/* ---------------- local do acidente (início) ---------------- */
+{
+  const ang = SPAWN_ANGLE + 0.02;
+  const d = islandRadius(ang)*0.99;
+  const cx = Math.cos(ang)*d, cz = Math.sin(ang)*d;
+  const ground = terrainH(cx, cz);
+  const wreck = new THREE.Group();
+  const metal = new THREE.MeshStandardMaterial({ color:0x9aa4b0, roughness:0.55, metalness:0.45, flatShading:true });
+  const metalDark = new THREE.MeshStandardMaterial({ color:0x4a5560, roughness:0.7, metalness:0.35, flatShading:true });
+  const rust = new THREE.MeshStandardMaterial({ color:0xa0532f, roughness:0.8, metalness:0.2, flatShading:true });
+
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 0.72, 5.6, 8), metal);
+  body.rotation.z = Math.PI/2;
+  body.rotation.x = 0.1;
+  body.position.set(0, 1.15, 0);
+  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.75, 1.6, 8), metalDark);
+  nose.rotation.z = -Math.PI/2;
+  nose.position.set(3.4, 1.05, 0);
+  const tail = new THREE.Mesh(new THREE.BoxGeometry(0.22, 1.7, 1.2), metalDark);
+  tail.position.set(-2.8, 1.9, 0);
+  const wing = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.16, 6.4), metal);
+  wing.position.set(-0.2, 0.85, 0.4);
+  wing.rotation.z = 0.12;
+  const wingBroken = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.14, 2.3), rust);
+  wingBroken.position.set(0.4, 0.42, -3.4);
+  wingBroken.rotation.set(0.2, 0.5, 0.35);
+  const prop = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.5, 6), metalDark);
+  prop.position.set(4.4, 1.05, 0);
+  prop.rotation.x = Math.PI/2;
+
+  [body,nose,tail,wing,wingBroken,prop].forEach(m=>{ m.castShadow = true; wreck.add(m); });
+
+  for (let i=0;i<4;i++){
+    const crate = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.7, 0.8), rust);
+    const a = i/4*Math.PI*2 + 0.4;
+    crate.position.set(Math.cos(a)*2.4, 0.35, Math.sin(a)*1.9);
+    crate.rotation.y = Math.random()*3;
+    crate.castShadow = true;
+    wreck.add(crate);
+  }
+
+  wreck.position.set(cx, ground, cz);
+  wreck.rotation.y = ang + Math.PI/2;
+  scene.add(wreck);
+  addChest(cx + 3.2, cz + 2.6, null);
+}
+
+/* ---------------- interação ---------------- */
+function nearestChest(limit){
+  let best = null, bd = limit;
+  for (const c of chests){
+    if (c.opened) continue;
+    const d = Math.hypot(player.pos.x - c.x, player.pos.z - c.z);
+    if (d < bd){ bd = d; best = c; }
+  }
+  return best;
+}
+
+function updateChestHUD(){
+  const opened = chests.filter(c=>c.opened).length;
+  if (elChestTxt) elChestTxt.textContent = 'baús ' + opened + '/' + chests.length;
+}
+
+const LOOT = [
+  { type:'energy',  amount:2, label:'2 energéticos' },
+  { type:'energy',  amount:1, label:'1 energético' },
+  { type:'snack',   amount:2, label:'2 lanches' },
+  { type:'snack',   amount:1, label:'1 lanche' },
+  { type:'bandage', amount:2, label:'2 bandagens' },
+  { type:'bandage', amount:1, label:'1 bandagem' },
+  { type:'piton',   amount:2, label:'2 pitões' },
+  { type:'piton',   amount:1, label:'1 pitão' }
+];
+
+function openChest(c){
+  if (c.opened || state !== 'play' || paused) return;
+  c.opened = true;
+  c.beam.visible = false;
+  c.ring.visible = false;
+  stats.chests++;
+  updateChestHUD();
+
+  const roll = LOOT[(Math.random()*LOOT.length)|0];
+  if (roll.type === 'piton'){ pitons += roll.amount; }
+  else { inv[roll.type] += roll.amount; }
+  updateInvUI();
+  let msg = '+ ' + roll.label;
+  if (Math.random() < 0.16){
+    STAM_MAX = Math.min(145, STAM_MAX + 5);
+    player.stamina = STAM_MAX;
+    stats.relics++;
+    msg += ' · relíquia! +5 stamina max';
+  }
+  toast(msg);
+  flash();
+  burstAt(c.x, c.y + 1.1, c.z, 0xffd447);
+  sfx('chest');
+}
+
+function useStatue(){
+  if (!statue || statue.used) return;
+  statue.used = true;
+  statue.halo.visible = false;
+  statue.eyes.forEach(e=>{ e.material.emissiveIntensity = 0.15; });
+  STAM_MAX = Math.min(160, STAM_MAX + 12);
+  player.stamina = STAM_MAX;
+  player.injured = false;
+  player.cold = false;
+  player.warmth = 40;
+  stats.relics++;
+  updateInvUI();
+  elChipHurt.classList.remove('on');
+  toast('bênção antiga · +12 stamina max');
+  flash();
+  burstAt(statue.x, terrainH(statue.x,statue.z) + 3.4, statue.z, 0xbfe8ff);
+  sfx('win');
+}
+
+function tryBoard(){
+  if (player.boat) return;
+  const d = Math.hypot(player.pos.x - boat.x, player.pos.z - boat.z);
+  if (d > 7){ toast('barco longe demais'); return; }
+  player.boat = true;
+  boat.occupied = true;
+  boat.speed = 0;
+  charGroup.visible = false;
+  player.climbing = false;
+  player.hanging = false;
+  player.hangAnchor = null;
+  toast('barco · W acelera · A/D vira · E desembarca');
+  sfx('ui');
+}
+
+function findShorePoint(){
+  let best = null, bd = 15;
+  for (let i=0;i<24;i++){
+    const a = i/24*Math.PI*2;
+    for (let d=3; d<=14; d+=1.4){
+      const x = boat.x + Math.cos(a)*d;
+      const z = boat.z + Math.sin(a)*d;
+      const h = terrainH(x,z);
+      if (h > SEA + 0.25 && normalAt(x,z).y > 0.42){
+        if (d < bd){ bd = d; best = { x, z, h }; }
+      }
+    }
+    if (best && bd < 6) break;
+  }
+  return best;
+}
+
+function tryDisembark(){
+  const spot = findShorePoint();
+  if (!spot){ toast('água funda · chegue mais perto da costa'); return false; }
+  player.boat = false;
+  boat.occupied = false;
+  boat.speed = 0;
+  player.pos.set(spot.x, terrainH(spot.x, spot.z) + PLAYER_R + 0.15, spot.z);
+  player.vel.set(0,0,0);
+  player.grounded = false;
+  charGroup.visible = true;
+  toast('em terra firme');
+  sfx('step');
+  return true;
+}
+
+function interact(){
+  if (state !== 'play' || paused) return;
+  if (player.boat){ tryDisembark(); return; }
+  const c = nearestChest(3.4);
+  if (c){ openChest(c); return; }
+  if (statue && !statue.used && Math.hypot(player.pos.x-statue.x, player.pos.z-statue.z) < 4.2){
+    useStatue(); return;
+  }
+  if (!boat.occupied && Math.hypot(player.pos.x-boat.x, player.pos.z-boat.z) < 7){
+    tryBoard(); return;
+  }
+  toast('nada por perto');
+}
+
+function updatePrompt(){
+  if (state !== 'play' || paused || player.boat){
+    if (player.boat && state === 'play' && !paused){
+      const shore = findShorePoint();
+      if (shore){
+        elPrompt.innerHTML = '<kbd>E</kbd> desembarcar';
+        elPrompt.classList.add('on');
+      } else {
+        elPrompt.innerHTML = '<kbd>W</kbd> navegar &nbsp; <kbd>A</kbd><kbd>D</kbd> virar';
+        elPrompt.classList.add('on');
+      }
+    } else {
+      elPrompt.classList.remove('on');
+    }
+    return;
+  }
+  let html = null;
+  const c = nearestChest(3.4);
+  if (c) html = '<kbd>E</kbd> abrir baú';
+  else if (statue && !statue.used && Math.hypot(player.pos.x-statue.x, player.pos.z-statue.z) < 4.2)
+    html = '<kbd>E</kbd> tocar a estátua antiga';
+  else if (!boat.occupied && Math.hypot(player.pos.x-boat.x, player.pos.z-boat.z) < 7)
+    html = '<kbd>E</kbd> entrar no barco';
+  if (html){ elPrompt.innerHTML = html; elPrompt.classList.add('on'); }
+  else elPrompt.classList.remove('on');
+}
+
+function updateChests(dt, t){
+  for (const c of chests){
+    const target = c.opened ? -1.75 : 0;
+    c.lidT = lerp(c.lidT, target, 1 - Math.exp(-7*dt));
+    c.lidPivot.rotation.x = c.lidT;
+    if (!c.opened){
+      c.ring.material.opacity = 0.28 + Math.sin(t*2.4 + c.phase)*0.16;
+      c.beam.material.opacity = 0.16 + Math.sin(t*1.7 + c.phase)*0.07;
+      c.ring.rotation.z += dt*0.3;
+    }
+  }
+  if (!boat.occupied){
+    boatGroup.position.y = SEA + 0.12 + Math.sin(t*1.3)*0.06;
+    boatGroup.rotation.z = Math.sin(t*0.9)*0.02;
+  }
+  if (statue && !statue.used){
+    statue.halo.material.opacity = 0.26 + Math.sin(t*2.2)*0.14;
+    statue.halo.rotation.z += dt*0.25;
+  }
+}
+
+function updateBoat(dt, t){
+  const throttle = (keys.f ? 1 : 0) - (keys.b ? 0.6 : 0);
+  const turn = (keys.l ? 1 : 0) - (keys.r ? 1 : 0);
+
+  boat.speed = lerp(boat.speed, throttle * BOAT_MAX, 1 - Math.exp(-1.6*dt));
+  if (!throttle) boat.speed *= Math.exp(-0.85*dt);
+  if (Math.abs(boat.speed) < 0.05) boat.speed = 0;
+
+  if (turn && Math.abs(boat.speed) > 0.4){
+    boat.heading += turn * 1.15 * dt * clamp(Math.abs(boat.speed)/8, 0.35, 1.25) * Math.sign(boat.speed);
+  }
+
+  const nx = boat.x + Math.sin(boat.heading) * boat.speed * dt;
+  const nz = boat.z + Math.cos(boat.heading) * boat.speed * dt;
+  const hAhead = terrainH(nx, nz);
+  if (hAhead > SEA + 1.1 && boat.speed > 0){
+    boat.speed = -boat.speed*0.2;
+    toast('encostou na costa');
+  } else {
+    boat.x = nx; boat.z = nz;
+  }
+  const rd = Math.hypot(boat.x, boat.z);
+  if (rd > 420){ boat.x *= 420/rd; boat.z *= 420/rd; }
+
+  boatGroup.position.set(boat.x, SEA + 0.12 + Math.sin(t*1.5)*0.09, boat.z);
+  boatGroup.rotation.y = boat.heading;
+  boatGroup.rotation.z = Math.sin(t*1.1)*0.025 + turn*0.06;
+
+  player.pos.set(boat.x, SEA + 0.9, boat.z);
+  player.vel.set(0,0,0);
+  player.grounded = false;
+  player.yawTarget = boat.heading;
+
+  let dyc = (boat.heading + Math.PI) - camYaw;
+  while (dyc >  Math.PI) dyc -= Math.PI*2;
+  while (dyc < -Math.PI) dyc += Math.PI*2;
+  camYaw += dyc * (1 - Math.exp(-2.2*dt));
+  camPitch = lerp(camPitch, 0.2, 1 - Math.exp(-1.4*dt));
+  if (camDist < 14) camDist = lerp(camDist, 16, 1 - Math.exp(-1.5*dt));
+
+  player.stamina = Math.min(STAM_MAX, player.stamina + 5*dt);
+}
+
+function resetInteract(){
+  stats.chests = 0;
+  stats.relics = 0;
+  STAM_MAX = 100;
+  chests.forEach(c=>{
+    c.opened = false;
+    c.lidT = 0;
+    c.lidPivot.rotation.x = 0;
+    c.beam.visible = true;
+    c.ring.visible = true;
+    c.ring.material.opacity = 0.42;
+  });
+  updateChestHUD();
+  if (statue){
+    statue.used = false;
+    statue.halo.visible = true;
+    statue.eyes.forEach(e=>{ e.material.emissiveIntensity = 2.0; });
+  }
+  boat.x = boat.dockX; boat.z = boat.dockZ; boat.heading = boat.dockHeading;
+  boat.speed = 0; boat.occupied = false;
+  boatGroup.position.set(boat.x, SEA + 0.12, boat.z);
+  boatGroup.rotation.y = boat.heading;
+  player.boat = false;
+  player.stamina = STAM_MAX;
+  charGroup.visible = true;
+  if (elPrompt) elPrompt.classList.remove('on');
+}
+
+function updateCompass(){
+  let best = null, bd = 1e9;
+  for (const c of chests){
+    if (c.opened) continue;
+    const d = Math.hypot(player.pos.x-c.x, player.pos.z-c.z);
+    if (d < bd){ bd = d; best = c; }
+  }
+  if (!best){
+    elCompassArr.style.opacity = '0.15';
+    elCompassDist.textContent = '—';
+  } else {
+    elCompassArr.style.opacity = '1';
+    const target = Math.atan2(best.x - player.pos.x, best.z - player.pos.z);
+    const forward = camYaw + Math.PI;
+    let dy = target - forward;
+    while (dy >  Math.PI) dy -= Math.PI*2;
+    while (dy < -Math.PI) dy += Math.PI*2;
+    elCompassArr.style.transform = 'rotate(' + (-dy*180/Math.PI).toFixed(1) + 'deg)';
+    elCompassDist.textContent = Math.round(bd) + 'm';
+  }
+  const isl = islandAt(player.pos.x, player.pos.z);
+  elIslandTag.textContent = isl ? isl.name : 'ilha principal';
+}
+
+updateChestHUD();
+
 /* ---------------- clima ---------------- */
 function updateClimate(dt){
   const alt = player.pos.y - PLAYER_R;
@@ -1683,9 +2405,9 @@ addEventListener('keydown', (e)=>{
     case 'KeyA': case 'ArrowLeft':  keys.l = 1; break;
     case 'KeyD': case 'ArrowRight': keys.r = 1; break;
     case 'KeyQ': keys.q = 1; break;
-    case 'KeyE': keys.e = 1; break;
     case 'ShiftLeft': case 'ShiftRight': keys.grab = true; break;
     case 'Space': e.preventDefault(); doJump(); break;
+    case 'KeyE': interact(); break;
     case 'Digit1': useEnergy(); break;
     case 'Digit2': useBandage(); break;
     case 'Digit3': useSnack(); break;
@@ -1704,7 +2426,6 @@ addEventListener('keyup', (e)=>{
     case 'KeyA': case 'ArrowLeft':  keys.l = 0; break;
     case 'KeyD': case 'ArrowRight': keys.r = 0; break;
     case 'KeyQ': keys.q = 0; break;
-    case 'KeyE': keys.e = 0; break;
     case 'ShiftLeft': case 'ShiftRight': keys.grab = false; break;
   }
 });
@@ -1799,6 +2520,18 @@ function doJump(){
 function spotY(x, z){ return terrainH(x,z) + PLAYER_R; }
 
 function respawn(){
+  if (player.boat){
+    player.boat = false;
+    boat.occupied = false;
+    boat.speed = 0;
+    charGroup.visible = true;
+  }
+  if (!boat.occupied){
+    boat.x = boat.dockX; boat.z = boat.dockZ; boat.heading = boat.dockHeading;
+    boat.speed = 0;
+    boatGroup.position.set(boat.x, SEA + 0.12, boat.z);
+    boatGroup.rotation.y = boat.heading;
+  }
   if (checkpoint){
     player.pos.copy(checkpoint.pos);
     player.pos.y = spotY(checkpoint.pos.x, checkpoint.pos.z) + 0.4;
@@ -1857,6 +2590,7 @@ function resetGame(){
   ovPause.classList.add('hidden');
   spawnItems();
   resetMates();
+  resetInteract();
   updateZone(0);
   focusSun(player.pos.x, player.pos.y, player.pos.z);
   syncCamera(0, true);
@@ -1929,6 +2663,7 @@ function updateGround(dt){
   player.vel.y -= GRAV*dt;
 
   const stepDist = Math.hypot(player.vel.x, player.vel.z)*dt;
+  const oldX = player.pos.x, oldZ = player.pos.z;
   const nx = player.pos.x + player.vel.x*dt;
   const nz = player.pos.z + player.vel.z*dt;
   const hNow = terrainH(player.pos.x, player.pos.z);
@@ -1937,9 +2672,17 @@ function updateGround(dt){
   if (hNew - hNow > allowed){
     player.vel.x *= 0.0;
     player.vel.z *= 0.0;
+  } else if (hNew < SEA - 0.14){
+    // água funda: não dá para atravessar a nado até as outras ilhas
+    player.pos.x = oldX;
+    player.pos.z = oldZ;
+    player.vel.x *= 0.1;
+    player.vel.z *= 0.1;
+    if (!player._deepWarn){ player._deepWarn = true; toast('água funda · pegue o barco na praia'); }
   } else {
     player.pos.x = nx;
     player.pos.z = nz;
+    player._deepWarn = false;
   }
 
   const vyBefore = player.vel.y;
@@ -1964,7 +2707,7 @@ function updateGround(dt){
   }
 
   const d = Math.hypot(player.pos.x, player.pos.z);
-  if (d > 240){ player.pos.x *= 240/d; player.pos.z *= 240/d; }
+  if (d > 420){ player.pos.x *= 420/d; player.pos.z *= 420/d; }
 
   const nAfter = normalAt(player.pos.x, player.pos.z);
   const coldMul = player.cold ? 0.35 : 1;
@@ -2073,9 +2816,10 @@ function update(dt){
   const t = performance.now()*0.001;
 
   if (keys.q) camYaw += 1.9*dt;
-  if (keys.e) camYaw -= 1.9*dt;
 
-  if (player.hanging && player.hangAnchor){
+  if (player.boat){
+    updateBoat(dt, t);
+  } else if (player.hanging && player.hangAnchor){
     updateHang(dt);
   } else {
     if (player.climbing){
@@ -2095,13 +2839,17 @@ function update(dt){
     }
   }
 
-  updateAnchors(dt);
+  if (!player.boat) updateAnchors(dt);
   updateCamps(dt, t);
   updateItems(dt, t);
   updateMates(dt, t);
   updateClimate(dt);
   updateZone(dt);
   updateSnow(dt);
+  updateChests(dt, t);
+  updateBursts(dt);
+  updatePrompt();
+  updateCompass();
   updateObjective();
 
   let dy = player.yawTarget - player.yaw;
@@ -2223,6 +2971,11 @@ function updateAmbient(dt, t){
   scene.fog.color.copy(FOG_LOW).lerp(FOG_HIGH, cold0);
   scene.fog.near = lerp(170, 52, cold0*cold0);
   scene.fog.far  = lerp(760, 320, cold0);
+  if (waterMat && waterMat.uniforms){
+    waterMat.uniforms.fogColor.value.copy(scene.fog.color);
+    waterMat.uniforms.fogNear.value = scene.fog.near;
+    waterMat.uniforms.fogFar.value = scene.fog.far;
+  }
   if (sun && sun.color){
     sun.color.copy(SUN_LOW).lerp(SUN_HIGH, cold0);
     sun.intensity = lerp(1.06, 0.72, cold0) + Math.sin(t*0.7)*0.02;
@@ -2292,6 +3045,8 @@ function win(){
   document.getElementById('winAlt').textContent = Math.round(player.pos.y - PLAYER_R) + ' m';
   document.getElementById('winItems').textContent = stats.used;
   document.getElementById('winFalls').textContent = player.falls;
+  const wc = document.getElementById('winChests');
+  if (wc) wc.textContent = stats.chests;
 
   const prev = getBest();
   const isBest = !prev || elapsed < prev;
@@ -2375,6 +3130,8 @@ window.__dbg = {
   scene, sun, renderer, camera, player, terrainH, camps, keys, update, resetGame, respawn, syncCamera, charGroup,
   items, mates, inv, stats, useEnergy, useBandage, useSnack, spawnItems, say,
   placePiton, anchors, clearAnchors, win, summit, catchFall,
+  chests, openChest, interact, boat, boatGroup, statue, ISLANDS, resetInteract,
+  tryBoard, tryDisembark, updateCompass,
   get hunger(){ return hunger; }, set hunger(v){ hunger = v; },
   get pitons(){ return pitons; }, set pitons(v){ pitons = v; },
   get camYaw(){ return camYaw; }, set camYaw(v){ camYaw = v; },
